@@ -20,34 +20,34 @@ module "iam_assumable_role_admin" {
   create_role                   = true
   role_name                     = "${data.aws_eks_cluster.this.id}_${local.thanos_name}"
   provider_url                  = replace(data.aws_eks_cluster.this.identity.0.oidc.0.issuer, "https://", "")
-  role_policy_arns              = [aws_iam_policy.thanos.arn]
+  # role_policy_arns              = [aws_iam_policy.thanos.arn]
   oidc_fully_qualified_subjects = ["system:serviceaccount:${local.namespace}:${local.thanos_name}"]
   tags                          = var.tags
 }
 
-resource "aws_iam_policy" "thanos" {
-  name_prefix = "${data.aws_eks_cluster.this.id}-thanos-"
-  description = "EKS thanos-s3 policy for cluster ${data.aws_eks_cluster.this.id}"
-  policy = jsonencode(
-    {
-      Version = "2012-10-17",
-      Statement = [
-        {
-          Effect = "Allow",
-          Action = [
-            "s3:ListBucket",
-            "s3:GetObject",
-            "s3:DeleteObject",
-            "s3:PutObject",
-            "s3:CreateBucket",
-            "s3:DeleteBucket"
-          ],
-          local.policy_resource,
-        }
-      ]
-    }
-  )
-}
+# resource "aws_iam_policy" "thanos" {
+#   name_prefix = "${data.aws_eks_cluster.this.id}-thanos-"
+#   description = "EKS thanos-s3 policy for cluster ${data.aws_eks_cluster.this.id}"
+#   policy = jsonencode(
+#     {
+#       Version = "2012-10-17",
+#       Statement = [
+#         {
+#           Effect = "Allow",
+#           Action = [
+#             "s3:ListBucket",
+#             "s3:GetObject",
+#             "s3:DeleteObject",
+#             "s3:PutObject",
+#             "s3:CreateBucket",
+#             "s3:DeleteBucket"
+#           ],
+#           local.policy_resource,
+#         }
+#       ]
+#     }
+#   )
+# }
 
 resource "random_password" "grafana_password" {
   length           = 16
@@ -241,27 +241,27 @@ config:
   }
 }
 
-resource "kubernetes_secret" "s3_objstore" {
-  count      = 1 - local.storage
-  depends_on = [kubernetes_namespace.this]
-  metadata {
-    name      = "thanos-objstore-config"
-    namespace = local.namespace
-    labels = {
-      "app.kubernetes.io/name" : "thanos-objstore-config"
-      "app.kubernetes.io/part-of" : "thanos"
-    }
-  }
-  data = {
-    "objstore.yml" = <<EOT
-type: s3
-config:
-  bucket: ${var.cluster_name}-thanos
-  endpoint: s3.${data.aws_region.current.name}.amazonaws.com
-  insecure: false
-  EOT
-  }
-}
+# resource "kubernetes_secret" "s3_objstore" {
+#   count      = 1 - local.storage
+#   depends_on = [kubernetes_namespace.this]
+#   metadata {
+#     name      = "thanos-objstore-config"
+#     namespace = local.namespace
+#     labels = {
+#       "app.kubernetes.io/name" : "thanos-objstore-config"
+#       "app.kubernetes.io/part-of" : "thanos"
+#     }
+#   }
+#   data = {
+#     "objstore.yml" = <<EOT
+# type: s3
+# config:
+#   bucket: ${var.cluster_name}-thanos
+#   endpoint: s3.${data.aws_region.current.name}.amazonaws.com
+#   insecure: false
+#   EOT
+#   }
+# }
 
 locals {
   #Grafana
@@ -378,7 +378,7 @@ locals {
     "prometheus.thanos.ingress.hosts[0]"                                   = "thanos-gateway.${var.domains[0]}"
     "prometheus.thanos.ingress.tls[0].secretName"                          = "thanos-gateway-local-tls"
     "prometheus.thanos.ingress.tls[0].hosts[0]"                            = "thanos-gateway.${var.domains[0]}"
-    "prometheus.thanos.objectStorageConfig.secretName"                     = local.storage > 0 ? kubernetes_secret.thanos_objstore[0].metadata.0.name : kubernetes_secret.s3_objstore[0].metadata.0.name
+    # "prometheus.thanos.objectStorageConfig.secretName"                     = local.storage > 0 ? kubernetes_secret.thanos_objstore[0].metadata.0.name : kubernetes_secret.s3_objstore[0].metadata.0.name
     "prometheus.thanos.objectStorageConfig.secretKey"                      = "objstore.yml"
     "prometheus.serviceAccount.name"                                       = local.thanos_name
     "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn" = module.iam_assumable_role_admin.this_iam_role_arn
@@ -454,7 +454,7 @@ locals {
     "minio.enabled"                     = local.storage > 0 ? "true" : "false"
     "minio.accessKey.password"          = "thanosStorage"
     "minio.secretKey.password"          = local.storage > 0 ? "KMS_ENC:${aws_kms_ciphertext.thanos_password[0].ciphertext_blob}:" : ""
-    "existingObjstoreSecret"            = local.storage > 0 ? kubernetes_secret.thanos_objstore[0].metadata.0.name : kubernetes_secret.s3_objstore[0].metadata.0.name
+    # "existingObjstoreSecret"            = local.storage > 0 ? kubernetes_secret.thanos_objstore[0].metadata.0.name : kubernetes_secret.s3_objstore[0].metadata.0.name
     "namespace"                         = local.namespace
     "existingServiceAccount"            = local.thanos_name # TODO: disable if local.prometheus_enabled = 0 
   }

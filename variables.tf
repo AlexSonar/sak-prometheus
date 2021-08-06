@@ -13,7 +13,7 @@ variable "prometheus_enabled" {
 variable "thanos_enabled" {
   type        = bool
   description = "Enable install thanos"
-  default     = true
+  default     = false
 }
 
 variable "grafana_enabled" {
@@ -42,7 +42,7 @@ variable "thanos_conf" {
 
 variable "namespace" {
   type        = string
-  default     = ""
+  default     = "edu_prometheus_issue"
   description = "A name of the existing namespace"
 }
 
